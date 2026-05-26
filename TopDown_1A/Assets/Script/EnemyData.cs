@@ -7,8 +7,8 @@ public class EnemyData : ScriptableObject
     public string enemyName;
 
     [Header("비주얼 에셋")]
-    public Sprite enemySprite;        // 살아있을 때 이미지
-    public Sprite deadSprite;         // [추가] 죽었을 때 (시체) 이미지
+    public Sprite enemySprite;        // 살아있을 때 도트
+    public Sprite deadSprite;         // 죽었을 때 (시체) 도트
 
     [Header("전투 능력치")]
     public int maxHp;

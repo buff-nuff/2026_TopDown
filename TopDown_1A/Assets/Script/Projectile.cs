@@ -1,44 +1,79 @@
 using UnityEngine;
+using UnityEngine.Pool;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class Projectile : MonoBehaviour
 {
-    private Vector2 moveDirection;
+    private Vector3 moveDirection;
     private float speed;
     private int damage;
-    private bool isInitialized = false;
+    
+    private IObjectPool<Projectile> managedPool;
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        // 물리 투사체 연산 최적화를 위한 설정 자동화
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+    }
+
+    public void SetPool(IObjectPool<Projectile> pool)
+    {
+        managedPool = pool;
+    }
 
     public void Setup(Vector2 direction, float projectileSpeed, int projectileDamage)
     {
-        moveDirection = direction.normalized;
+        moveDirection = (Vector3)direction.normalized;
         speed = projectileSpeed;
         damage = projectileDamage;
-        isInitialized = true;
 
-        // 맵 밖으로 영원히 날아가는 것을 방지하기 위해 5초 뒤 자동 파괴
-        Destroy(gameObject, 5f); 
+        // [최적화] 날아가는 방향으로 1회만 각도 계산 (Update 연산 제거)
+        float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
     }
-    // Update is called once per frame
-    void Update()
-    {
-        if (!isInitialized) return;
 
-        // 매 프레임 지정된 방향으로 이동
-        transform.Translate(moveDirection * speed * Time.deltaTime, Space.World);
+    private void OnEnable()
+    {
+        // 켜지면 5초 뒤 자동 비활성화 타이머 작동
+        Invoke(nameof(Deactivate), 5f);
+    }
+
+    private void OnDisable()
+    {
+        // 꺼질 때 타이머 및 물리 속도 완전 리셋 (잔상/가속 버그 방지)
+        CancelInvoke(nameof(Deactivate));
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+        }
+    }
+
+    void FixedUpdate()
+    {
+        // Translate 대신 가볍고 정확한 물리 MovePosition 연산 사용
+        if (rb != null)
+        {
+            rb.MovePosition(transform.position + moveDirection * (speed * Time.fixedDeltaTime));
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // 충돌한 오브젝트가 "Enemy" 태그를 가지고 있다면
-        if (collision.CompareTag("Enemy"))
+        // TryGetComponent로 태그 검사와 컴포넌트 추출을 동시에 처리 (연산량 절반 감소)
+        if (collision.TryGetComponent<EnemyAI>(out var enemy))
         {
-            EnemyAI enemy = collision.GetComponent<EnemyAI>();
-            if (enemy != null)
-            {
-                enemy.TakeDamage(damage); // 적에게 데미지 전달
-            }
-
-            // 적과 부딪힌 이펙트는 즉시 파괴 (관통 효과를 원하면 이 줄을 지우세요)
-            Destroy(gameObject); 
+            enemy.TakeDamage(damage);
+            Deactivate();
         }
+    }
+
+    private void Deactivate()
+    {
+        if (managedPool != null) managedPool.Release(this);
+        else gameObject.SetActive(false);
     }
 }
