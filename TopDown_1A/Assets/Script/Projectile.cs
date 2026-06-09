@@ -1,79 +1,97 @@
-using UnityEngine;
-using UnityEngine.Pool;
+ï»¿using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class Projectile : MonoBehaviour
 {
-    private Vector3 moveDirection;
     private float speed;
     private int damage;
     
-    private IObjectPool<Projectile> managedPool;
+    private Transform targetEnemy;
+    private Vector2 lastDirection; 
+    private bool hasTarget = false;
+
     private Rigidbody2D rb;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        // ¹°¸® Åõ»çÃ¼ ¿¬»ê ÃÖÀûÈ­¸¦ À§ÇÑ ¼³Á¤ ÀÚµ¿È­
+        
+        // âš¡ ë¬¼ë¦¬ ì†ë„ ê°„ì„­ ë²„ê·¸ë¥¼ ë§‰ê¸° ìœ„í•´ Kinematic ì„¤ì • ìœ ì§€
         rb.bodyType = RigidbodyType2D.Kinematic;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
 
-    public void SetPool(IObjectPool<Projectile> pool)
+    public void Setup(Transform target, Vector2 fallbackDirection, float projectileSpeed, int projectileDamage)
     {
-        managedPool = pool;
-    }
-
-    public void Setup(Vector2 direction, float projectileSpeed, int projectileDamage)
-    {
-        moveDirection = (Vector3)direction.normalized;
         speed = projectileSpeed;
         damage = projectileDamage;
-
-        // [ÃÖÀûÈ­] ³¯¾Æ°¡´Â ¹æÇâÀ¸·Î 1È¸¸¸ °¢µµ °è»ê (Update ¿¬»ê Á¦°Å)
-        float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
-    }
-
-    private void OnEnable()
-    {
-        // ÄÑÁö¸é 5ÃÊ µÚ ÀÚµ¿ ºñÈ°¼ºÈ­ Å¸ÀÌ¸Ó ÀÛµ¿
-        Invoke(nameof(Deactivate), 5f);
-    }
-
-    private void OnDisable()
-    {
-        // ²¨Áú ¶§ Å¸ÀÌ¸Ó ¹× ¹°¸® ¼Óµµ ¿ÏÀü ¸®¼Â (ÀÜ»ó/°¡¼Ó ¹ö±× ¹æÁö)
-        CancelInvoke(nameof(Deactivate));
-        if (rb != null)
+        
+        if (target != null)
         {
-            rb.linearVelocity = Vector2.zero;
-            rb.angularVelocity = 0f;
+            targetEnemy = target;
+            hasTarget = true;
         }
+        else
+        {
+            targetEnemy = null;
+            hasTarget = false;
+            
+            // í”Œë ˆì´ì–´ê°€ ì±„ì§‘í•´ ì¤€ ìƒí•˜ì¢Œìš° ìˆœìˆ˜ ë°©í–¥ì„ ë°±ì—…
+            lastDirection = fallbackDirection.normalized;
+            
+            // ì´ë¯¸ì§€ ê°ë„ë¥¼ ì§„í–‰ ë°©í–¥ì— ë§ê²Œ ì¦‰ì‹œ íšŒì „
+            float angle = Mathf.Atan2(lastDirection.y, lastDirection.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+        }
+
+        Destroy(gameObject, 5f);
     }
 
     void FixedUpdate()
     {
-        // Translate ´ë½Å °¡º±°í Á¤È®ÇÑ ¹°¸® MovePosition ¿¬»ê »ç¿ë
-        if (rb != null)
+        if (rb == null) return;
+
+        // 1. ì ì„ í¬ì°©í–ˆì„ ë•Œ â” ì ì˜ ìœ„ì¹˜ë¥¼ í–¥í•´ ì‹¤ì‹œê°„ ì¢Œí‘œ ì¶”ì  ì´ë™
+        if (hasTarget && targetEnemy != null && targetEnemy.gameObject.activeInHierarchy)
         {
-            rb.MovePosition(transform.position + moveDirection * (speed * Time.fixedDeltaTime));
+            Vector2 currentPos = transform.position;
+            Vector2 targetPos = targetEnemy.position;
+            Vector2 direction = (targetPos - currentPos).normalized;
+            
+            // âš¡ [ë²„ê·¸ í•´ê²° í•µì‹¬ 1] rb.linearVelocityë¥¼ ì“°ì§€ ì•Šê³  MovePositionìœ¼ë¡œ ì§ì ‘ ì¢Œí‘œ ì´ë™
+            Vector2 nextPosition = currentPos + direction * (speed * Time.fixedDeltaTime);
+            rb.MovePosition(nextPosition);
+
+            // êµ¬ì²´ê°€ ì ì„ ë°”ë¼ë³´ë„ë¡ ì‹¤ì‹œê°„ ê°ë„ ì—…ë°ì´íŠ¸
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+            
+            lastDirection = direction;
+        }
+        // 2. ì ì´ ì—†ì„ ë•Œ â” í”Œë ˆì´ì–´ê°€ ì…ë ¥í–ˆë˜ ìƒí•˜ì¢Œìš° ìˆœìˆ˜ ë°ì´í„° ë°©í–¥ìœ¼ë¡œ ì§ì„  ì¢Œí‘œ ì´ë™
+        else
+        {
+            Vector2 currentPos = transform.position;
+            
+            // âš¡ [ë²„ê·¸ í•´ê²° í•µì‹¬ 2] ì˜¤ë¥¸ìª½ ê³ ì • ë²„ê·¸ ìœ ë°œ ì¸ìë¥¼ ì§€ìš°ê³ , ì˜¤ì§ ì…ë ¥ë°›ì€ ë°©í–¥ ë²¡í„°(lastDirection)ë¡œë§Œ ì¢Œí‘œ ì´ë™
+            Vector2 nextPosition = currentPos + lastDirection * (speed * Time.fixedDeltaTime);
+            rb.MovePosition(nextPosition);
+            
+            // íšŒì „ ê³ ì • ë³´ì¥
+            float angle = Mathf.Atan2(lastDirection.y, lastDirection.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
         }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // TryGetComponent·Î ÅÂ±× °Ë»ç¿Í ÄÄÆ÷³ÍÆ® ÃßÃâÀ» µ¿½Ã¿¡ Ã³¸® (¿¬»ê·® Àı¹İ °¨¼Ò)
-        if (collision.TryGetComponent<EnemyAI>(out var enemy))
+        if (collision.TryGetComponent<EnemyController>(out var enemyCtrl))
         {
-            enemy.TakeDamage(damage);
-            Deactivate();
+            if (!enemyCtrl.isDead && collision.TryGetComponent<CharacterStats>(out var enemyStats))
+            {
+                enemyStats.TakeDamage(damage);
+                Destroy(gameObject); 
+            }
         }
-    }
-
-    private void Deactivate()
-    {
-        if (managedPool != null) managedPool.Release(this);
-        else gameObject.SetActive(false);
     }
 }

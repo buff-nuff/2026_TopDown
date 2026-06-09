@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PlayerPossession : MonoBehaviour
 {
-    // --- 싱글톤 (메모리 최적화) ---
+    // --- 싱글톤 ---
     private static PlayerPossession _instance;
     public static PlayerPossession Instance 
     { 
@@ -22,13 +22,18 @@ public class PlayerPossession : MonoBehaviour
     [Header("전투 및 빙의 설정")]
     public LayerMask enemyLayer;          
     public float possessRadius = 2f;      
-    public float attackRadius = 1.5f;     
+    public float attackRadius = 10f;     
 
-    [Header("순수 스프라이트 공격 이펙트")]
+    [Header("순수 스프라이트 공격 이펙트 (구체 프리팹)")]
     public GameObject attackEffectPrefab; 
     public Transform attackPoint;         
 
-    // 가비지 컬렉터(GC) 방지를 위해 가변 배열 저장용 버퍼 미리 할당 (최대 10마리 감지)
+    [Header("구체 발사 스펙")]
+    public float projectileSpeed = 8f;
+
+    // ⭐ [추가] 캐릭터가 마지막으로 바라본 상하좌우 방향을 기억하는 변수 (기본값: 오른쪽)
+    private Vector2 lastLookDirection = Vector2.right;
+
     private readonly Collider2D[] scanBuffer = new Collider2D[10];
 
     private void Awake() 
@@ -42,6 +47,16 @@ public class PlayerPossession : MonoBehaviour
 
     void Update()
     {
+        // ⭐ [방향 기록 핵심] 매 프레임 플레이어의 이동 입력을 감지해 '바라보는 정면 방향'을 실시간 업데이트합니다.
+        float moveX = Input.GetAxisRaw("Horizontal");
+        float moveY = Input.GetAxisRaw("Vertical");
+        
+        // 아무 키나 누르고 있을 때만 그 방향을 정면으로 기억 (멈췄을 때 0으로 초기화되는 것 방지)
+        if (moveX != 0 || moveY != 0)
+        {
+            lastLookDirection = new Vector2(moveX, moveY).normalized;
+        }
+
         // 1. 키 입력 처리 (공격)
         if (Input.GetKeyDown(KeyCode.F))
         {
@@ -55,40 +70,57 @@ public class PlayerPossession : MonoBehaviour
         }
     }
 
-    // [최적화] F키 공격 및 이펙트 처리
     private void Attack()
     {
-        Vector3 spawnPosition = attackPoint != null ? attackPoint.position : transform.position;
-        
-        // 이펙트 생성 및 방향 물리 반전
-        if (attackEffectPrefab != null)
-        {
-            GameObject effect = Instantiate(attackEffectPrefab, spawnPosition, transform.rotation);
-            if (playerSpriteRenderer.flipX)
-            {
-                Vector3 localScale = effect.transform.localScale;
-                localScale.x *= -1;
-                effect.transform.localScale = localScale;
-            }
-        }
+        if (attackEffectPrefab == null) return;
 
-        // [최적화] NonAlloc 방식을 사용하여 매 프레임 발생하는 가비지(GC) 낭비 제거
+        Vector3 spawnPosition = attackPoint != null ? attackPoint.position : transform.position;
+
+        // 1. 범위 내 적 수집 및 타겟팅
         int hitCount = Physics2D.OverlapCircleNonAlloc(spawnPosition, attackRadius, scanBuffer, enemyLayer);
         
+        Transform closestEnemy = null;
+        float shortestDistanceSqr = Mathf.Infinity;
+
         for (int i = 0; i < hitCount; i++)
         {
-            // GetComponent 중복 호출 최소화를 위해 안전하게 검사
+            if (scanBuffer[i] == null) continue;
+
             if (scanBuffer[i].TryGetComponent<EnemyController>(out var enemyCtrl))
             {
-                if (!enemyCtrl.isDead && scanBuffer[i].TryGetComponent<CharacterStats>(out var enemyStats))
+                if (enemyCtrl.isDead) continue;
+
+                float distanceSqr = (scanBuffer[i].transform.position - transform.position).sqrMagnitude;
+                if (distanceSqr < shortestDistanceSqr)
                 {
-                    enemyStats.TakeDamage((int)playerStats.attackDamage);
+                    shortestDistanceSqr = distanceSqr;
+                    closestEnemy = scanBuffer[i].transform;
                 }
             }
         }
+
+        // ⭐ [버그 해결] 타겟이 없을 때, 실시간으로 기억해 둔 마지막 정면 방향(lastLookDirection)을 그대로 사용합니다.
+        Vector2 defaultDirection = lastLookDirection;
+
+        // 2. 구체 생성
+        GameObject effect = Instantiate(attackEffectPrefab, spawnPosition, Quaternion.identity);
+        
+        // 이펙트 비주얼 좌우 반전 처리
+        if (playerSpriteRenderer != null && playerSpriteRenderer.flipX)
+        {
+            Vector3 localScale = effect.transform.localScale;
+            localScale.x *= -1;
+            effect.transform.localScale = localScale;
+        }
+
+        // 3. 구체에 정보 주입 (적 발견 시 유도탄, 없을 시 상하좌우 정면 비행)
+        if (effect.TryGetComponent<Projectile>(out var proj))
+        {
+            int damage = playerStats != null ? (int)playerStats.attackDamage : 15;
+            proj.Setup(closestEnemy, defaultDirection, projectileSpeed, damage);
+        }
     }
 
-    // [최적化] E키를 눌렀을 때만 주변의 죽은 시체를 탐색하도록 흐름 수정 (매 프레임 연산 제거)
     private void TryPossessNearestCorpse()
     {
         int hitCount = Physics2D.OverlapCircleNonAlloc(transform.position, possessRadius, scanBuffer, enemyLayer);
@@ -96,18 +128,20 @@ public class PlayerPossession : MonoBehaviour
 
         GameObject targetEnemyObj = null;
         CharacterStats targetEnemyStats = null;
-        float shortestDistance = Mathf.Infinity;
+        float shortestDistanceSqr = Mathf.Infinity;
 
         for (int i = 0; i < hitCount; i++)
         {
+            if (scanBuffer[i] == null) continue;
+
             if (scanBuffer[i].TryGetComponent<EnemyController>(out var enemyCtrl) && enemyCtrl.isDead)
             {
-                float distance = Vector2.Distance(transform.position, scanBuffer[i].transform.position);
-                if (distance < shortestDistance)
+                float distanceSqr = (scanBuffer[i].transform.position - transform.position).sqrMagnitude;
+                if (distanceSqr < shortestDistanceSqr)
                 {
-                    if (scanBuffer[i].TryGetComponent<CharacterStats>(out var enemyStats))
+                    if (scanBuffer[i].transform.TryGetComponent<CharacterStats>(out var enemyStats))
                     {
-                        shortestDistance = distance;
+                        shortestDistanceSqr = distanceSqr;
                         targetEnemyObj = scanBuffer[i].gameObject;
                         targetEnemyStats = enemyStats;
                     }
@@ -115,7 +149,6 @@ public class PlayerPossession : MonoBehaviour
             }
         }
 
-        // 조건에 맞는 가장 가까운 시체가 있다면 빙의 실행
         if (targetEnemyObj != null && targetEnemyStats != null)
         {
             ExecutePossession(targetEnemyStats, targetEnemyObj);
@@ -127,6 +160,9 @@ public class PlayerPossession : MonoBehaviour
         playerStats.CopyFromTarget(enemyStats);
         playerSpriteRenderer.sprite = playerStats.characterSprite;
         playerSpriteRenderer.color = Color.white; 
+
+        // 빙의 성공 시 바라보는 방향 초기화 변수 방지 차원 유지
+        lastLookDirection = Vector2.right;
 
         Destroy(enemyObject);
     }
