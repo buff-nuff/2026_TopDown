@@ -17,6 +17,8 @@ public class PlayerController : MonoBehaviour
     private int frameIndex = 0;
     private float timer = 0f;
 
+    public Vector2 playerDirection = Vector2.down;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -74,16 +76,28 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(input.x) > Mathf.Abs(input.y))
         {
             if (input.x > 0)
+            {
                 ChangeSprites(spriteRight);
+                playerDirection = Vector2.right;
+            }
             else
+            {
                 ChangeSprites(spriteLeft);
+                playerDirection = Vector2.left;
+            }
         }
         else
         {
             if (input.y > 0)
+            {
                 ChangeSprites(spriteUp);
+                playerDirection = Vector2.up;
+            }
             else
+            {
                 ChangeSprites(spriteDown);
+                playerDirection = Vector2.down;
+            }
         }
     }
 

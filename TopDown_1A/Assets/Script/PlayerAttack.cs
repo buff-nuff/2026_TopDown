@@ -18,12 +18,14 @@ public class PlayerAttack : MonoBehaviour
     // ⚡ [최적화 1] 가비지 컬렉션(GC) 렉 방지를 위한 메모리 고정 고간
     private Collider2D[] targetResults; 
     private SpriteRenderer playerSpriteRenderer;
+    private PlayerController pC;
 
     void Awake()
     {
         // 배열을 미리 한 번만 할당해 두고 평생 재사용합니다. (메모리 쓰레기 0%)
         targetResults = new Collider2D[maxTargetDetection];
         playerSpriteRenderer = GetComponent<SpriteRenderer>();
+        pC = GetComponent<PlayerController>();
 
         if (firePoint == null)
         {
@@ -74,19 +76,12 @@ public class PlayerAttack : MonoBehaviour
             }
         }
 
-        // ⚡ [캐릭터 바라보는 방향 계산] 
-        // 캐릭터 이미지가 좌우 반전(flipX)되었는지 확인하여 적이 없을 때 날아갈 정면 방향을 결정합니다.
-        Vector2 defaultDirection = transform.right; 
-        if (playerSpriteRenderer != null && playerSpriteRenderer.flipX)
-        {
-            defaultDirection = Vector2.left; 
-        }
 
         // 구체 생성 및 데이터 주입
         GameObject projGo = Instantiate(projectilePrefab, firePoint.position, Quaternion.identity);
         if (projGo.TryGetComponent<Projectile>(out var proj))
         {
-            proj.Setup(closestEnemy, defaultDirection, projectileSpeed, attackDamage);
+            proj.Setup(closestEnemy, pC.playerDirection, projectileSpeed, attackDamage);
         }
     }
 
