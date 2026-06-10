@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bb7dc50871fa42c429505a33d079bff7, type: 3}
-  m_Name: NewEnemyData
+  m_Name: GoblinData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: Enemy
-  enemySprite: {fileID: 3234629978573100161, guid: 1018b0ba13578bf459bd254ae1a2be99, type: 3}
-  deadSprite: {fileID: -276728812324164698, guid: 29ba92ebaa6f6964083271810310d1ca, type: 3}
+  enemyName: goblin
+  enemySprite: {fileID: 4723107735738678597, guid: c1cdd26cc09ad224884556bc4d8296ae, type: 3}
+  deadSprite: {fileID: 6991849013916550155, guid: cbd77a78256671c4c9cf1492e8ce39b1, type: 3}
   maxHp: 10
   moveSpeed: 2
   attackDamage: 4
