@@ -34,7 +34,7 @@ public class PlayerPossession : MonoBehaviour
     // ⭐ [추가] 캐릭터가 마지막으로 바라본 상하좌우 방향을 기억하는 변수 (기본값: 오른쪽)
     private Vector2 lastLookDirection = Vector2.right;
 
-    private readonly Collider2D[] scanBuffer = new Collider2D[10];
+    private Collider2D[] scanBuffer = new Collider2D[10];
 
     private void Awake() 
     { 
@@ -77,12 +77,12 @@ public class PlayerPossession : MonoBehaviour
         Vector3 spawnPosition = attackPoint != null ? attackPoint.position : transform.position;
 
         // 1. 범위 내 적 수집 및 타겟팅
-        int hitCount = Physics2D.OverlapCircleNonAlloc(spawnPosition, attackRadius, scanBuffer, enemyLayer);
+        scanBuffer = Physics2D.OverlapCircleAll(spawnPosition, attackRadius, enemyLayer);
         
         Transform closestEnemy = null;
         float shortestDistanceSqr = Mathf.Infinity;
 
-        for (int i = 0; i < hitCount; i++)
+        for (int i = 0; i < scanBuffer.Length; i++)
         {
             if (scanBuffer[i] == null) continue;
 
@@ -123,14 +123,14 @@ public class PlayerPossession : MonoBehaviour
 
     private void TryPossessNearestCorpse()
     {
-        int hitCount = Physics2D.OverlapCircleNonAlloc(transform.position, possessRadius, scanBuffer, enemyLayer);
-        if (hitCount == 0) return;
+        scanBuffer = Physics2D.OverlapCircleAll(transform.position, possessRadius, enemyLayer);
+        if (scanBuffer.Length == 0) return;
 
         GameObject targetEnemyObj = null;
         CharacterStats targetEnemyStats = null;
         float shortestDistanceSqr = Mathf.Infinity;
 
-        for (int i = 0; i < hitCount; i++)
+        for (int i = 0; i < scanBuffer.Length; i++)
         {
             if (scanBuffer[i] == null) continue;
 
