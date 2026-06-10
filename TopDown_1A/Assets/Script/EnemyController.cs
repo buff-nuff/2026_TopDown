@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(CharacterStats))]
+
 [RequireComponent(typeof(SpriteRenderer))]
 public class EnemyController : MonoBehaviour
 {

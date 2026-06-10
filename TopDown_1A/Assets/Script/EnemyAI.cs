@@ -57,7 +57,7 @@ public class EnemyAI : MonoBehaviour
 
         if (spriteRenderer != null)
         {
-            spriteRenderer.flipX = (direction.x > 0);
+            spriteRenderer.flipX = (direction.x < 0);
         }
     }
 

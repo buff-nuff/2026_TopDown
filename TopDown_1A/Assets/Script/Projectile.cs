@@ -87,9 +87,9 @@ public class Projectile : MonoBehaviour
     {
         if (collision.TryGetComponent<EnemyController>(out var enemyCtrl))
         {
-            if (!enemyCtrl.isDead && collision.TryGetComponent<CharacterStats>(out var enemyStats))
+            if (!enemyCtrl.isDead && collision.TryGetComponent<EnemyAI>(out var enemyAI))
             {
-                enemyStats.TakeDamage(damage);
+                enemyAI.TakeDamage(damage);
                 Destroy(gameObject); 
             }
         }

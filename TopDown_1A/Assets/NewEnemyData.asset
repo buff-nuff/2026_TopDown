@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: NewEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: Enemy
-  enemySprite: {fileID: -6503586504595259668, guid: 4cbc68d579fe14144a4f37a7da5675cc, type: 3}
-  deadSprite: {fileID: 0}
+  enemySprite: {fileID: 3234629978573100161, guid: 1018b0ba13578bf459bd254ae1a2be99, type: 3}
+  deadSprite: {fileID: -276728812324164698, guid: 29ba92ebaa6f6964083271810310d1ca, type: 3}
   maxHp: 10
   moveSpeed: 2
   attackDamage: 4
