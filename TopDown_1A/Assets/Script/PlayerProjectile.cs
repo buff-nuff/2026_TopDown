@@ -34,11 +34,10 @@ public class PlayerProjectile : MonoBehaviour
             Destroy(gameObject);
         }
         // (선택 사항) 벽이나 장애물에 부딪혔을 때도 구체가 사라지게 하고 싶다면 아래 주석을 푸세요.
-        /*
+        
         else if (collision.CompareTag("Wall"))
         {
             Destroy(gameObject);
         }
-        */
     }
 }

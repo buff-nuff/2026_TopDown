@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: GoblinData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: goblin
-  enemySprite: {fileID: 4723107735738678597, guid: c1cdd26cc09ad224884556bc4d8296ae, type: 3}
-  deadSprite: {fileID: 6991849013916550155, guid: cbd77a78256671c4c9cf1492e8ce39b1, type: 3}
   maxHp: 10
   moveSpeed: 2
-  attackDamage: 4
+  chaseRadius: 6
+  damage: 10
+  enemySprite: {fileID: 4723107735738678597, guid: c1cdd26cc09ad224884556bc4d8296ae, type: 3}
