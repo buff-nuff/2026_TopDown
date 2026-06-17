@@ -1,17 +1,16 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "NewEnemyData", menuName = "RogueLike/Enemy Data")]
+[CreateAssetMenu(fileName = "NewEnemyData", menuName = "ScriptableObjects/EnemyData", order = 1)]
 public class EnemyData : ScriptableObject
 {
-    [Header("기본 정보")]
-    public string enemyName;
+    [Header("몬스터 정보 및 스텟")]
+    public string enemyName = "몬스터";
+    public float maxHp = 100f;
+    public float moveSpeed = 3f;
+    public float chaseRadius = 6f;
+    public int damage = 10;
 
-    [Header("비주얼 에셋")]
-    public Sprite enemySprite;        // 살아있을 때 도트
-    public Sprite deadSprite;         // 죽었을 때 (시체) 도트
-
-    [Header("전투 능력치")]
-    public int maxHp;
-    public float moveSpeed;
-    public float attackDamage;
+    [Header("몬스터 원본 이미지 (단 1장)")]
+    // 💡 좌우로 움직일 때 이 이미지를 기반으로 렌더러가 반전시킵니다.
+    public Sprite enemySprite;
 }
