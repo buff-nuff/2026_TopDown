@@ -8,6 +8,9 @@ public class OnlyEnemyController : MonoBehaviour
     [Header("몬스터 스텟 데이터 파일")]
     [SerializeField] private EnemyData enemyData;
 
+    [Header("👻 보스 전용 세이브 설정")]
+    [SerializeField] private GameObject bossSoulPrefab;
+
     private float currentHp;
 
     // 내부 컴포넌트 변수
@@ -112,6 +115,10 @@ public class OnlyEnemyController : MonoBehaviour
 
         OnDestroyedEvent?.Invoke();
         if (TryGetComponent<Collider2D>(out var col)) col.enabled = false;
+        if (bossSoulPrefab != null)
+        {
+            Instantiate(bossSoulPrefab, transform.position, Quaternion.identity);
+        }
         Destroy(gameObject);
     }
 
