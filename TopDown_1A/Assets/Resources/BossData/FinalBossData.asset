@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bb7dc50871fa42c429505a33d079bff7, type: 3}
-  m_Name: GoblinData
+  m_Name: FinalBossData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: goblin
-  maxHp: 10
-  moveSpeed: 2
+  enemyName: "\uCE7C\uC744 \uB4E4\uC9C0\uB9CC \uAD6C\uCCB4 \uBC1C\uC0AC\uD558\uB294
+    \uACE0\uBE14\uB9B0"
+  maxHp: 1000
+  moveSpeed: 0.5
   chaseRadius: 6
   damage: 10
-  enemySprite: {fileID: 4723107735738678597, guid: c1cdd26cc09ad224884556bc4d8296ae, type: 3}
+  enemySprite: {fileID: -7385789195546760866, guid: c1cdd26cc09ad224884556bc4d8296ae, type: 3}

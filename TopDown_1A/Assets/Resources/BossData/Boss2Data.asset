@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bb7dc50871fa42c429505a33d079bff7, type: 3}
-  m_Name: Boss2
+  m_Name: Boss2Data
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uB3CC\uC9C4\uBC84\uC12F"
-  maxHp: 100
-  moveSpeed: 1
+  maxHp: 500
+  moveSpeed: 2
   chaseRadius: 10
   damage: 10
   enemySprite: {fileID: 4723107735738678597, guid: f8b30c2afe165d645b54d500a9c30862, type: 3}

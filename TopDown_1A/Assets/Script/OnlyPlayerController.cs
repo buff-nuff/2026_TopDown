@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections; // ◀️ [필수 추가] 이 줄이 없으면 IEnumerator 에러가 발생합니다!
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -29,6 +30,8 @@ public class OnlyPlayerController : MonoBehaviour
     private float originalMoveSpeed;    // 인간일 때의 원래 이동 속도
     private Sprite humanBaseSprite;     // 인간일 때의 기본 스프라이트
     private bool isTransformed = false; // 현재 변신 중인지 확인하는 플래그
+    private EnemyData currentBossData = null; 
+    private bool isDashing = false;
 
     private Rigidbody2D rb;
     private SpriteRenderer sr;
@@ -115,11 +118,9 @@ public class OnlyPlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isDead)
-        {
-            rb.linearVelocity = Vector2.zero;
-            return;
-        }
+        // 🆕 isDashing 일 때 물리 이동을 임시 차단 (대쉬 코루틴이 직접 제어하기 위함)
+        if (isDead || isDashing) return; 
+        
         rb.MovePosition(rb.position + velocity * Time.fixedDeltaTime);
     }
 
@@ -230,43 +231,100 @@ public class OnlyPlayerController : MonoBehaviour
             sr.sprite = currentSprites[frameIndex];
         }
     }
-    // ⭐ [추가됨] JSON 파일과 연동하여 보스로 변신하거나 해제하는 함수
+    
+    // 🆕 변신한 보스의 파일명에 따라 기믹을 실행하는 컨트롤 타워
+    private void UseBossGimmick(string bossName)
+    {
+        switch (bossName)
+        {
+            case "Boss1Data":
+                Fire8Way(); // 보스 1 기믹: 8방향 발사
+                break;
+
+            case "Boss2Data":
+                StartCoroutine(Boss2DashRoutine()); // 보스 2 기믹: 초고속 대쉬
+                break;
+
+            case "Boss3Data":
+                Debug.Log("👹 [보스 3 기믹] 준비된 기믹 발동!");
+                break;
+        }
+    }
+
+    // 🆕 보스 1 기믹: 45도 간격 8방향 사격
+    private void Fire8Way()
+    {
+        if (projectilePrefab == null) return;
+
+        for (int i = 0; i < 8; i++)
+        {
+            float angle = i * 45f;
+            Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+
+            GameObject proj = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
+            proj.transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+
+#if UNITY_2022_1_OR_NEWER
+            proj.GetComponent<Rigidbody2D>().linearVelocity = dir * projectileSpeed;
+#else
+            proj.GetComponent<Rigidbody2D>().velocity = dir * projectileSpeed;
+#endif
+        }
+    }
+
+   // 💨 보스 2 기믹: 바라보는 방향으로 속도 3배 대쉬 코루틴 (오타 교정 완료)
+    private IEnumerator Boss2DashRoutine()
+    {
+        isDashing = true;
+        float dashSpeed = moveSpeed * 3f; 
+        float dashDuration = 0.2f;        
+        float elapsed = 0f;
+
+        while (elapsed < dashDuration)
+        {
+            elapsed += Time.deltaTime;
+#if UNITY_2022_1_OR_NEWER
+            rb.linearVelocity = playerDirection * dashSpeed;
+#else
+            rb.velocity = playerDirection * dashSpeed;
+#endif
+            yield return null;
+        }
+
+#if UNITY_2022_1_OR_NEWER
+        rb.linearVelocity = Vector2.zero;
+#else
+        rb.velocity = Vector2.zero;
+#endif
+
+        isDashing = false;
+    } // ◀️ 함수의 끝을 닫는 중괄호가 여기 정상적으로 위치해야 합니다.
+
+    // 🔄 [변경됨] 로드할 때 currentBossData에 스크립터블 오브젝트 원본을 기억해두도록 수정
     private void ToggleTransformation()
     {
         if (isTransformed)
         {
-            // 1. 이미 변신 중이었다면 원래 인간으로 복구
             isTransformed = false;
+            currentBossData = null; // 인간으로 돌아오면 데이터 비우기
             moveSpeed = originalMoveSpeed;
             sr.sprite = humanBaseSprite;
             Debug.Log("🧍 보스 변신을 해제하고 인간 형태로 돌아왔습니다.");
         }
         else
         {
-            // 2. 인간 상태라면 저장된 JSON 보스 데이터를 로드
             BossSoulData savedSoul = BossSaveManager.LoadBossSoul();
+            if (savedSoul == null || string.IsNullOrEmpty(savedSoul.scriptableObjectName)) return;
 
-            if (savedSoul == null || string.IsNullOrEmpty(savedSoul.scriptableObjectName))
-            {
-                Debug.LogWarning("❌ 변신 불가: 저장된 보스 영혼이 없습니다. (보스 시체에서 Q를 눌러 흡수하세요)");
-                return;
-            }
-
-            // Resources/BossData 경로에서 스크립터블 오브젝트 로드
             EnemyData loadedBossData = Resources.Load<EnemyData>($"BossData/{savedSoul.scriptableObjectName}");
+            if (loadedBossData == null) return;
 
-            if (loadedBossData == null)
-            {
-                Debug.LogError($"❌ 에셋 로드 실패: 'Assets/Resources/BossData/{savedSoul.scriptableObjectName}' 파일을 찾을 수 없습니다.");
-                return;
-            }
-
-            // 보스의 능력치와 외형 덮어씌우기
             isTransformed = true;
+            currentBossData = loadedBossData; // 🆕 변신할 보스 데이터 연결!
             moveSpeed = loadedBossData.moveSpeed;
             sr.sprite = loadedBossData.enemySprite;
 
-            Debug.Log($"👹 [변신 성공] 현재 보스: {loadedBossData.enemyName} (속도: {moveSpeed})");
+            Debug.Log($"👹 [변신 성공] {loadedBossData.enemyName} (스페이스바 입력 시 전용 기믹 발동!)");
         }
     }
 }
