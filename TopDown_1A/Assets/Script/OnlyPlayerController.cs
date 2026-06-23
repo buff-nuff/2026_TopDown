@@ -24,6 +24,12 @@ public class OnlyPlayerController : MonoBehaviour
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private float projectileSpeed = 10f;
 
+    // ⭐ [추가됨] 변신 시스템을 위한 변수들
+    [Header("✨ 변신 시스템 설정")]
+    private float originalMoveSpeed;    // 인간일 때의 원래 이동 속도
+    private Sprite humanBaseSprite;     // 인간일 때의 기본 스프라이트
+    private bool isTransformed = false; // 현재 변신 중인지 확인하는 플래그
+
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private Vector2 input;
@@ -51,11 +57,22 @@ public class OnlyPlayerController : MonoBehaviour
         {
             currentSprites = spriteDown;
             sr.sprite = currentSprites[0];
+
+            // ⭐ [추가됨] 게임 시작 시 인간 형태의 기본값 백업
+            humanBaseSprite = spriteDown[0];
         }
+        // ⭐ [추가됨] 원래 속도 백업
+        originalMoveSpeed = moveSpeed;
+
     }
 
     private void Update()
     {
+        // ⭐ [추가됨] F키를 누르면 변신 토글 실행
+        if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
+        {
+            ToggleTransformation();
+        }
         // 사망 상태라면 키 입력이나 행동을 모두 차단합니다.
         if (isDead) return;
 
@@ -66,7 +83,11 @@ public class OnlyPlayerController : MonoBehaviour
             FireProjectile();
         }
 
+
         velocity = input.normalized * moveSpeed;
+
+        // ⭐ [추가됨] 보스로 변신 중이라면 인간 형태의 발걸음 애니메이션을 계산하지 않고 마칩니다.
+        if (isTransformed) return;
 
         if (input.sqrMagnitude <= 0.01f)
         {
@@ -207,6 +228,45 @@ public class OnlyPlayerController : MonoBehaviour
         if (currentSprites != null && currentSprites.Length > 0)
         {
             sr.sprite = currentSprites[frameIndex];
+        }
+    }
+    // ⭐ [추가됨] JSON 파일과 연동하여 보스로 변신하거나 해제하는 함수
+    private void ToggleTransformation()
+    {
+        if (isTransformed)
+        {
+            // 1. 이미 변신 중이었다면 원래 인간으로 복구
+            isTransformed = false;
+            moveSpeed = originalMoveSpeed;
+            sr.sprite = humanBaseSprite;
+            Debug.Log("🧍 보스 변신을 해제하고 인간 형태로 돌아왔습니다.");
+        }
+        else
+        {
+            // 2. 인간 상태라면 저장된 JSON 보스 데이터를 로드
+            BossSoulData savedSoul = BossSaveManager.LoadBossSoul();
+
+            if (savedSoul == null || string.IsNullOrEmpty(savedSoul.scriptableObjectName))
+            {
+                Debug.LogWarning("❌ 변신 불가: 저장된 보스 영혼이 없습니다. (보스 시체에서 Q를 눌러 흡수하세요)");
+                return;
+            }
+
+            // Resources/BossData 경로에서 스크립터블 오브젝트 로드
+            EnemyData loadedBossData = Resources.Load<EnemyData>($"BossData/{savedSoul.scriptableObjectName}");
+
+            if (loadedBossData == null)
+            {
+                Debug.LogError($"❌ 에셋 로드 실패: 'Assets/Resources/BossData/{savedSoul.scriptableObjectName}' 파일을 찾을 수 없습니다.");
+                return;
+            }
+
+            // 보스의 능력치와 외형 덮어씌우기
+            isTransformed = true;
+            moveSpeed = loadedBossData.moveSpeed;
+            sr.sprite = loadedBossData.enemySprite;
+
+            Debug.Log($"👹 [변신 성공] 현재 보스: {loadedBossData.enemyName} (속도: {moveSpeed})");
         }
     }
 }

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb7dc50871fa42c429505a33d079bff7, type: 3}
   m_Name: Boss2
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: boss2
+  enemyName: "\uB3CC\uC9C4\uBC84\uC12F"
   maxHp: 100
   moveSpeed: 1
   chaseRadius: 10

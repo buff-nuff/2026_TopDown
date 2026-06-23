@@ -11,6 +11,9 @@ public class OnlyEnemyController : MonoBehaviour
     [Header("👻 보스 전용 세이브 설정")]
     [SerializeField] private GameObject bossSoulPrefab;
 
+    [Header("⚔️ 몸싸움 대미지 설정")]
+    [SerializeField] private float contactDamage = 15f; // 플레이어와 부딪혔을 때 줄 대미지 수치
+
     private float currentHp;
 
     // 내부 컴포넌트 변수
@@ -100,6 +103,23 @@ public class OnlyEnemyController : MonoBehaviour
         // 위/아래로만 움직일 때는 기존의 flipX 상태를 그대로 유지하므로 어색하지 않습니다.
     }
 
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        // 부딪힌 대상이 'Player' 태그를 가졌는지 확인합니다.
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            // 플레이어 컨트롤러 컴포넌트를 가져옵니다.
+            OnlyPlayerController player = collision.gameObject.GetComponent<OnlyPlayerController>();
+
+            if (player != null)
+            {
+                player.TakeDamage(contactDamage);
+                Debug.Log($"💥 [몸싸움 피격] {gameObject.name}과 부딪혀 플레이어가 {contactDamage} 대미지를 입었습니다.");
+            }
+        }
+    }
+
     public void TakeDamage(float amount)
     {
         if (isDead) return;
@@ -118,6 +138,12 @@ public class OnlyEnemyController : MonoBehaviour
         if (bossSoulPrefab != null)
         {
             Instantiate(bossSoulPrefab, transform.position, Quaternion.identity);
+        }
+
+        // ⭐ [이 줄을 추가합니다] 던전 매니저에게 보스가 죽었다고 알립니다.
+        if (DungeonManager.Instance != null)
+        {
+            DungeonManager.Instance.BossDefeated();
         }
         Destroy(gameObject);
     }
