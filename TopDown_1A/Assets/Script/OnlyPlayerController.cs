@@ -155,7 +155,7 @@ public class OnlyPlayerController : MonoBehaviour
     public void OnClickMainMenu()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("MainMenuScene");
+        SceneManager.LoadScene("main");
     }
 
     private void MatrixKeyInputCheck()
